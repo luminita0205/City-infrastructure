@@ -1,7 +1,9 @@
-
 #include<string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+//da constante pentru permisiunea intreab
+//S_IRUSR -> macrou pentro cod de permisiune
+//man 2 chmod
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,17 +23,17 @@ typedef struct
 } Report;
 //verifica inainte sa dechizi fisere cu set daca are permisiunea buna
 //stat()->aici am ramas
-int verifica_permisiuni(char *fisier, int perm)
+int checkWithStat(char *fisier, int perm)
 {
     struct stat st;
 
     if(stat(fisier,&st) == -1)
     {
-        printf("Eroare stat\n");
+        printf("Bad Stat Info\n");
         return 0;
     }
 
-    if((st.st_mode & 0777) == perm)
+    if(st.st_mode & perm)
     {
         return 1;
     }
@@ -39,7 +41,7 @@ int verifica_permisiuni(char *fisier, int perm)
     return 0;
 }
 
-FILE *deschide_fisier(char *nume, char *mod)
+FILE *openFile(char *nume, char *mod)
 {
     FILE *f = fopen(nume, mod);
 
@@ -52,12 +54,113 @@ FILE *deschide_fisier(char *nume, char *mod)
     return f;
 }
 
+//verificare de permisiuni ->man 2 chmod nu uita
+//intreab daca asta trebe la list sau e ok sa precizez de aici
+void checkPermissions(char *role, char *path1, char *path2, char *path3)
+{
+    //reports.dat
+    if (strcmp(role, "inspector") == 0)
+    {
+        printf("Inspector can read and write reports.dat\n");
+
+        if (!checkWithStat(path1, S_IWUSR))
+        {
+            printf("Access denied:Inspector cannot write in reports.dat\n");
+            exit(1);
+        }
+    }
+    else if (strcmp(role, "manager") == 0)
+    {
+        printf("Manager can read and write reports.dat\n");
+    }
+
+    //district.cfg
+    if (strcmp(role, "manager") == 0)
+    {
+        printf("Manager can read and write district.cfg\n");
+    }
+    else if (strcmp(role, "inspector") == 0)
+    {
+        printf("Inspector can only read district.cfg\n");
+    }
+
+    if (!checkWithStat(path2, S_IRUSR))
+    {
+        printf("No read permission for district.cfg\n");
+        exit(1);
+    }
+
+    //logged_district
+    if (strcmp(role, "manager") == 0)
+    {
+        printf("Manager can read and write logged_district\n");
+    }
+    else if (strcmp(role, "inspector") == 0)
+    {
+        printf("Inspector can only read logged_district\n");
+    }
+}
+//convert perm to string
+void permissionToString(mode_t mode, char string[])
+{
+    //R-read USR-user
+    if(mode & S_IRUSR) string[0]='r';
+    else string[0]='-';
+
+    if(mode & S_IWUSR) string[1]='w';
+    else string[1]='-';
+
+    if(mode & S_IXUSR) string[2]='x';
+    else string[2]='-';
+
+    if(mode & S_IRGRP) string[3]='r';
+    else string[3]='-';
+    //W-group
+    if(mode & S_IWGRP) string[4]='w';
+    else string[4]='-';
+
+    if(mode & S_IXGRP) string[5]='x';
+    else string[5]='-';
+
+    if(mode & S_IROTH) string[6]='r';
+    else string[6]='-';
+
+    if(mode & S_IWOTH) string[7]='w';
+    else string[7]='-';
+
+    if(mode & S_IXOTH) string[8]='x';
+    else string[8]='-';
+
+    string[9]='\0';
+}
+//list
+//trebe apelat cu list inainte de downtown
+void listCommand(char *fisier)
+{
+    struct stat st;
+    //permisiunea
+    char string[10];
+
+    if(stat(fisier,&st)==-1)
+    {
+        printf("Stat error\n");
+        return;
+    }
+
+    permissionToString(st.st_mode,string);
+
+    printf("Permissions: %s\n",string);
+    printf("Size: %ld bytes\n",st.st_size);
+    printf("Last modified: %s",ctime(&st.st_mtime));
+}
+
+
 int main(int argc,char *argv[])
 {
     if(argc!=7)
     {
-      fprintf(stderr,"Eroare la argumente");
-      exit(-1);
+        fprintf(stderr,"Invalid arguments");
+        exit(-1);
     }
     else
     {
@@ -68,59 +171,80 @@ int main(int argc,char *argv[])
     {
         if(strcmp(argv[2],"inspector")==0)
         {
-            printf("are rolul de %s\n",argv[2]);
-        }
-        if(strcmp(argv[2],"manager")==0)
-        {
-            printf("are rolul de %s\n",argv[2]);
+            printf("has the role of %s\n",argv[2]);
         }
 
+        if(strcmp(argv[2],"manager")==0)
+        {
+            printf("has the role of %s\n",argv[2]);
+        }
     }
 
     if(strcmp(argv[3],"--user")==0)
     {
-        printf("userul are numele %s\n",argv[4]);
+        printf("The name of the user is %s\n",argv[4]);
     }
-     //creem director separat pentru fiecare district
-     //foar cu functii c
-      char *dirname =malloc(SIZE*sizeof(char));
-      if(dirname==NULL)
-      {
-          fprintf(stderr,"Eroare la alocare\n");
-          exit(-1);
-      }
-      
-     strcpy(dirname,argv[6]);
 
-      if(mkdir(dirname)==0)
-      {
-          printf("S-a creat cu succes!\n");
-      }
-      else
-      {
-             printf("Directorul exista deja.\n");
-      }
+    char *dirname = malloc(SIZE*sizeof(char));
+
+    if(dirname==NULL)
+    {
+        fprintf(stderr,"Memory error\n");
+        exit(-1);
+    }
+
+    strcpy(dirname,argv[6]);
+
+    if(mkdir(dirname,0750)==0)
+    {
+        printf("Directory created successfully <3\n");
+    }
+    else
+    {
+        printf("Directory already exists:)\n");
+    }
+
     chmod(dirname,0750);
+
     char path1[200];
     char path2[200];
     char path3[200];
-    
+
     sprintf(path1,"%s/reports.dat",dirname);
     sprintf(path2,"%s/district.cfg",dirname);
     sprintf(path3,"%s/logged_district",dirname);
-    
-    FILE *f  = deschide_fisier(path1,"ab");
-    FILE *f1 = deschide_fisier(path2,"a");
-    //a->append
-    FILE *f2 = deschide_fisier(path3,"a");
+
+
+
+    FILE *f1  = openFile(path1,"ab");
+
+    FILE *f2 = openFile(path2,"a");
+
+    FILE *f3 = openFile(path3,"a");
+
+    fclose(f1);
+    fclose(f2);
+    fclose(f3);
 
     chmod(path1,0664);
     chmod(path2,0640);
     chmod(path3,0644);
+   //AFISARE PERMISIUNI CU LIST PT REPORTS
+    if(strcmp(argv[5],"list")==0)
+    {
+        listCommand(path1);
+        free(dirname);
+        return 0;
+    }
+    //intreaba daca e ok functia separata verificare dupa deschidere
+    //sau in main verificare separata pentru fiecare drept inainte de deschiderea fiecarui fisier
+    checkPermissions(argv[2], path1, path2, path3);
 
-   
-    //scriere de xemple in fisier->intreaba daca trebe
+    //fisier1 reports.dat
+    f1= openFile(path1,"ab");
+
     Report report;
+
     report.report_id = 1;
     strcpy(report.inspector_name, argv[4]);
     report.latitude = 45.75;
@@ -129,46 +253,51 @@ int main(int argc,char *argv[])
     report.severity_level = 3;
     report.timp = time(NULL);
     strcpy(report.description,"Groapa mare");
-    fwrite(&report,sizeof(Report),1,f);
 
-   
-    fprintf(f1,"threshold=2\n");
-
+    fwrite(&report,sizeof(Report),1,f1);
     fclose(f1);
-    f1 = fopen(path2,"r");
+
+    //fisier2  district.cfg
+    f2 = openFile(path2,"w");
+    fprintf(f2,"threshold=2\n");
+    fclose(f2);
+
+    f2 = openFile(path2,"r");
+
     int threshold;
-    fscanf(f1,"threshold=%d",&threshold);
-        
+    fscanf(f2,"threshold=%d",&threshold);
+
+    fclose(f2);
 
     if(report.severity_level >= threshold)
     {
         printf("ALERTA!\n");
     }
-     else
+    else
     {
         printf("Nu este alerta\n");
     }
 
-    time_t now = time(NULL);
+    //fisier 3 logged_district
+    f3 = openFile(path3,"a");
 
-    fprintf(f2,"[%ld] %s %s %s %s\n",
-    now,argv[2], argv[4],argv[5],  argv[6]);  
+    fprintf(f3,"[%ld] %s %s %s %s\n",
+            time(NULL),argv[2],argv[4],argv[5],argv[6]);
 
-    //exemplu sa vad ca merge
-    fprintf(f2,"[time] inspector bob add downtown\n");
-    fclose(f2);
-    f2 = fopen(path3,"r");
+    fclose(f3);
+
+    f3 = openFile(path3,"r");
 
     char linie[200];
 
-    while(fgets(linie, sizeof(linie), f2) != NULL)
+    while(fgets(linie,sizeof(linie),f3)!=NULL)
     {
-        printf("%s", linie);
+        printf("%s",linie);
     }
 
-    fclose(f);
-    fclose(f1);
-    fclose(f2);
+    fclose(f3);
+
     free(dirname);
+
     return 0;
 }
