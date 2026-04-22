@@ -1,6 +1,7 @@
 #include<string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 //da constante pentru permisiunea intreab
 //S_IRUSR -> macrou pentro cod de permisiune
 //man 2 chmod
@@ -41,9 +42,9 @@ int checkWithStat(char *fisier, int perm)
     return 0;
 }
 
-FILE *openFile(char *nume, char *mod)
+FILE *openFile(char *nume, char *mode)
 {
-    FILE *f = fopen(nume, mod);
+    FILE *f = fopen(nume, mode);
 
     if(f == NULL)
     {
@@ -52,6 +53,20 @@ FILE *openFile(char *nume, char *mod)
     }
 
     return f;
+}
+
+//creare permisiune cu 0000
+void createEmptyFile(char *nume)
+{
+    int fd = open(nume, O_CREAT | O_RDWR, 0000);
+
+    if(fd == -1)
+    {
+        perror(nume);
+        exit(1);
+    }
+
+    close(fd);
 }
 
 //verificare de permisiuni ->man 2 chmod nu uita
@@ -134,7 +149,7 @@ void permissionToString(mode_t mode, char string[])
     string[9]='\0';
 }
 //list
-//trebe apelat cu list inainte de downtown
+//./prog --role inspector --user ana --list downtown
 void listCommand(char *fisier)
 {
     struct stat st;
@@ -148,12 +163,24 @@ void listCommand(char *fisier)
     }
 
     permissionToString(st.st_mode,string);
-
+    printf("\n");
+    printf("LISTCOMMAND:\n");
     printf("Permissions: %s\n",string);
     printf("Size: %ld bytes\n",st.st_size);
     printf("Last modified: %s",ctime(&st.st_mtime));
 }
 
+//in add verrifc daca exista director
+//cele 3 fisiere
+//permisiuni verificare
+//link simbolic
+void addReport(char *fisier)
+{
+    //trebe dacase creeaza un director nou sa adaugi alea 3 fisiere in el
+    //verifici daca exitsa directoru daca nu il adaugi
+    //pot strge aia cu creeare downtown
+    //functie separata de creere director
+}
 
 int main(int argc,char *argv[])
 {
@@ -203,7 +230,6 @@ int main(int argc,char *argv[])
     {
         printf("Directory already exists:)\n");
     }
-
     chmod(dirname,0750);
 
     char path1[200];
@@ -214,34 +240,29 @@ int main(int argc,char *argv[])
     sprintf(path2,"%s/district.cfg",dirname);
     sprintf(path3,"%s/logged_district",dirname);
 
+    //fiiser gol permisiune 0000
+    createEmptyFile(path1);
+    createEmptyFile(path2);
+    createEmptyFile(path3);
 
-
-    FILE *f1  = openFile(path1,"ab");
-
-    FILE *f2 = openFile(path2,"a");
-
-    FILE *f3 = openFile(path3,"a");
-
-    fclose(f1);
-    fclose(f2);
-    fclose(f3);
-
+    //setare permisiuni
     chmod(path1,0664);
     chmod(path2,0640);
     chmod(path3,0644);
-   //AFISARE PERMISIUNI CU LIST PT REPORTS
-    if(strcmp(argv[5],"list")==0)
+
+    //comanda lis afisare detalii
+    if(strcmp(argv[5],"--list") == 0)
     {
         listCommand(path1);
         free(dirname);
         return 0;
     }
-    //intreaba daca e ok functia separata verificare dupa deschidere
-    //sau in main verificare separata pentru fiecare drept inainte de deschiderea fiecarui fisier
+
+    //check
     checkPermissions(argv[2], path1, path2, path3);
 
-    //fisier1 reports.dat
-    f1= openFile(path1,"ab");
+    //reports.dat
+    FILE *f1 = openFile(path1,"ab");
 
     Report report;
 
@@ -257,8 +278,8 @@ int main(int argc,char *argv[])
     fwrite(&report,sizeof(Report),1,f1);
     fclose(f1);
 
-    //fisier2  district.cfg
-    f2 = openFile(path2,"w");
+    // district.cfg
+    FILE *f2 = openFile(path2,"w");
     fprintf(f2,"threshold=2\n");
     fclose(f2);
 
@@ -266,23 +287,19 @@ int main(int argc,char *argv[])
 
     int threshold;
     fscanf(f2,"threshold=%d",&threshold);
-
     fclose(f2);
 
     if(report.severity_level >= threshold)
-    {
         printf("ALERTA!\n");
-    }
     else
-    {
         printf("Nu este alerta\n");
-    }
 
-    //fisier 3 logged_district
-    f3 = openFile(path3,"a");
-
+    //logged_district
+    FILE *f3 = openFile(path3,"a");
+    printf("\n");
+    printf("SE SCRIE IN LOG\n");
     fprintf(f3,"[%ld] %s %s %s %s\n",
-            time(NULL),argv[2],argv[4],argv[5],argv[6]);
+            time(NULL), argv[2], argv[4], argv[5], argv[6]);
 
     fclose(f3);
 
@@ -290,10 +307,8 @@ int main(int argc,char *argv[])
 
     char linie[200];
 
-    while(fgets(linie,sizeof(linie),f3)!=NULL)
-    {
+    while(fgets(linie,sizeof(linie),f3) != NULL)
         printf("%s",linie);
-    }
 
     fclose(f3);
 
