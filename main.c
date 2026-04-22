@@ -110,6 +110,13 @@ void checkPermissions(char *role, char *path1, char *path2, char *path3)
     {
         printf("Manager can read and write logged_district\n");
     }
+    //modifica la log doar manager poate write
+    //trebe verificare permisiune si aici
+    //maneger->owner
+    //inspector ->other
+    //si asta tre sa vezi daca rolu e insopector doar read
+    //operatie log cu rol mesaj
+    //in log in functie de loc sa verifice daca e log sau nu
     else if (strcmp(role, "inspector") == 0)
     {
         printf("Inspector can only read logged_district\n");
@@ -150,6 +157,7 @@ void permissionToString(mode_t mode, char string[])
 }
 //list
 //./prog --role inspector --user ana --list downtown
+//asta se adauga ulterior la celalalt list
 void listCommand(char *fisier)
 {
     struct stat st;

@@ -16,3 +16,4 @@ LOG:[1776837385] manager ana --add downtown
 [1776838535] manager ana --list downtown
 [1776838737] inspector bob --list downtown
 [1776838998] manager ana --add downtown
+[1776839635] inspector ana --add downtown
