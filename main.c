@@ -1,6 +1,7 @@
 #include<string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 //da constante pentru permisiunea intreab
 //S_IRUSR -> macrou pentro cod de permisiune
@@ -640,6 +641,53 @@ void removeReport(char *dirname, int wantedId, char *role, char *user)
 
     writeLog(dirname,role,user,"remove_report");
 }
+//functie ajutatoare pentru stergerea operatiilor din district
+//pot face unlink doar daca stergerea de director a reusit
+//comanda remove_district
+ void remove_district(char*idDistrict,char *role)
+ {
+     checkDirectoryPermission(idDistrict,role);
+     int pid=fork();
+     if(pid<0)
+     {
+         printf("Apare o eroare la procesul de creeare al copilului");
+         exit(0);
+     }
+     //trebuie facuta legatura cu comanda externa rm -rf <district_directory>
+     //pid=0 inseamna ca procesul copil a fost creat cu succes
+     else if(pid==0)
+     {
+         printf("Am ajuns in procesul parinte");
+         char *arguments[]={"rm","-rf",idDistrict,NULL};
+         execvp("rm",arguments);
+         exit(0);
+     }
+     //execlp->list de argumente
+     //execvp->vector de argumente
+     //pid>0 inseamna ca este parintele procesului,NU COPILUL!
+     else if(pid>0)
+     {
+         printf("suntem in procesul copil\n");
+         int status_ptr;
+         //WUNTRACED-also return if a child has stopped
+         if(waitpid(pid,&status_ptr,WUNTRACED)==-1)
+             //-1 meaning wait for any child process.
+         {
+                 printf("Eroare procesul nu s-a oprit inca\n");
+                 exit(-1);
+         }
+          char linkname[200];
+          sprintf(linkname,"active_reports-%s",idDistrict);
+
+          if(unlink(linkname))
+          {
+              printf("am rupt legatura");
+          }
+
+     }
+
+}
+
 
 //functie update_thresold
 void updateThreshold(char *dirname,int value,char *role,char *user)
@@ -949,6 +997,15 @@ int main(int argc,char *argv[])
         if(strcmp(argv[2],"manager")==0)
             writeLog(dirname,argv[2],argv[4],"filter");
 
+        free(dirname);
+        return 0;
+    }
+     if(strcmp(argv[5],"--remove_district")==0)
+    {
+
+        checkDirectoryPermission(dirname,argv[2]);
+
+        remove_district(dirname,argv[2]);
         free(dirname);
         return 0;
     }
