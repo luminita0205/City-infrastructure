@@ -28,26 +28,37 @@ void createPidFile()
     close(contorOk);
 }
 
-//sterge doar la ctrl+c
-void handle_Sigint(int semnal)
+//oprire doar la ctrl+c->SIGINT
+void handler(int semnal)
 {
+    //semnal pentru oprirea programului
+    if(semnal==SIGINT)
+    {
     printf("Monitor stopped\n");
     unlink(".monitor_pid");
     exit(0);
+    }
+    //semnal pentru add new report
+    else if(semnal==SIGUSR1)
+    {
+          printf("New report added!\n");
+    }
 }
 
-//semnal pentru add new report
-void handle_Sigusr1(int semnal)
-{
-    printf("New report added!\n");
-}
+
 
 int main(void)
 {
      createPidFile();
      //functia primeste automat param de la sistemul de operare
-     signal(SIGINT,handle_Sigint);
-     signal(SIGUSR1, handle_Sigusr1);
+     //trebe struct
+     struct sigaction act;
+     act.sa_flags = 0;
+     act.sa_handler = &handler;
+
+
+     sigaction(SIGINT,&act,NULL);
+     sigaction(SIGUSR1,&act,NULL);
      while(1)
      {
          pause();

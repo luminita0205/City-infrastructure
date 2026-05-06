@@ -152,7 +152,8 @@ void checkDirectoryPermission(char *dirname, char *role)
     }
 }
 
-//functia de log propusa la laborator
+//TREBE ADAUGAT SI TIMESTAMP !!!
+
 void writeLog(char *dirname,char *role,char *user,char *command)
 {
     char path[200];
@@ -562,6 +563,40 @@ void addReport(char *dirname, char *user, char *role)
         else
             printf("No alert\n");
     }
+    //flag pentru verificare operatiei cu succes
+    int contorMonitor=0;
+    FILE *m=fopen(".monitor_pid","r");
+    if(m==NULL)
+    {
+        perror("eroare la deschidere fisier ascuns\n");
+        exit(-1);
+    }
+    else
+    {
+        int monitor_pid;
+        //daca gasim un semnal
+        if(fscanf(m,"%d",&monitor_pid)==1)
+        {
+            //kill->transmite semnal , nu omoara !
+            //0 cod pentru transmitere semnal
+            if(kill(monitor_pid,SIGUSR1)==0)
+            {
+                contorMonitor=1;
+            }
+        }
+        fclose(m);
+    }
+    if(contorMonitor==0)
+    {
+        writeLog(dirname,role,user,"Pid-ul nu a putut fi gasit sau semnalul nu a putut fi transmis\n");
+
+    }
+    else
+    {
+        writeLog(dirname,role,user,"Pid gasit");
+
+    }
+
 }
 
 //comanda remove
