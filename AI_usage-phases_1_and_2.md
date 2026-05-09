@@ -1,5 +1,7 @@
 Cum am folosit AI la proiect
 
+Faza 1
+
 La acest proiect am folosit AI doar pentru implementarea funcționalității filter, exact partea permisă în cerință.
 
 AI m-a ajutat în special la construirea logicii pentru interpretarea condițiilor introduse în linia de comandă și compararea lor cu datele din structura Report.
@@ -44,10 +46,21 @@ Pașii realizați:
 - apelarea match_condition()
 - afișarea doar a rapoartelor care respectă toate condițiile
 
-Cum am continuat eu
-
-După ajutorul primit, eu am integrat funcțiile în proiect, le-am adaptat la structura mea Report, am testat comenzile în terminal și am corectat eventualele erori.
 
 Concluzie
 
 AI a fost folosit doar pentru partea de filter, adică interpretarea condițiilor și logica de filtrare. Restul proiectului a fost realizat separat de mine.
+
+
+Faza 2
+Am folosit AI pentru a afla ce inseamna fiecare cod returnat de functia predefinita pid().
+
+Pentru fisierul monitor_reports.c am folosit acest tool si am consultat si pagina de manual pentru a afla structura de la sigaction.
+
+Am consultat si pentru a schimba comentariile in engleza,sa fiu sigura ca sunt corecte gramatical.
+
+Am cautat informatii si despre ce parametrii are functia kill().
+
+
+
+

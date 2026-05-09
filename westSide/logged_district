@@ -17,3 +17,7 @@
 [2026-05-09 20:22:19] manager ana list
 [2026-05-09 20:25:05] manager teo add
 [2026-05-09 20:25:05] manager teo Monitor notified successfully
+[2026-05-09 21:06:35] manager alin add
+[2026-05-09 21:06:35] manager alin Monitor PID could not be found or signal could not be sent
+[2026-05-09 21:06:47] manager ana list
+[2026-05-09 21:07:23] manager alin remove_report

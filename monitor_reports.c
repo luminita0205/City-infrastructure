@@ -8,11 +8,11 @@
 void createPidFile()
 {
     int contorOk;
-    //se ia pidul de la fisier
+    ///wait for signals
     pid_t pid=getpid();
     char string[20];
 
-    //il creeaza sau il suprascrie
+     //create or overwrite
     contorOk=open(".monitor_pid", O_CREAT | O_WRONLY | O_TRUNC, 0644);
 
     if(contorOk==-1)
@@ -24,21 +24,21 @@ void createPidFile()
     sprintf(string,"%d",pid);
     write(contorOk,string,strlen(string));
 
-    //eliberez descriptor important!!
+     //!!important step
     close(contorOk);
 }
 
-//oprire doar la ctrl+c->SIGINT
+//the program stops only when Ctrl+C is pressed -> SIGINT
 void handler(int semnal)
 {
-    //semnal pentru oprirea programului
+    //signal used to stop the program
     if(semnal==SIGINT)
     {
     printf("Monitor stopped\n");
     unlink(".monitor_pid");
     exit(0);
     }
-    //semnal pentru add new report
+    //signal received when a new report is added
     else if(semnal==SIGUSR1)
     {
           printf("New report added!\n");
@@ -50,8 +50,8 @@ void handler(int semnal)
 int main(void)
 {
      createPidFile();
-     //functia primeste automat param de la sistemul de operare
-     //trebe struct
+     //the operating system automatically sends the signal number to the handler
+    //sigaction structure used for signal handling
      struct sigaction act;
      act.sa_flags = 0;
      act.sa_handler = &handler;
@@ -62,7 +62,7 @@ int main(void)
      while(1)
      {
          pause();
-         //asteapta semnale
+         //wait for signals
      }
      return 0;
 }
