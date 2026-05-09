@@ -1,1 +1,14 @@
 [1777226243] manager alice add
+[2026-05-07 12:28:24] manager ana add
+[2026-05-07 12:28:24] manager ana Pid-ul nu a putut fi gasit sau semnalul nu a putut fi transmis
+
+[2026-05-09 20:13:59] manager ana list
+[2026-05-09 20:16:06] manager ana remove_report
+[2026-05-09 20:16:11] manager ana remove_report
+[2026-05-09 20:16:13] manager ana remove_report
+[2026-05-09 20:16:18] manager ana list
+[2026-05-09 20:18:43] manager ana add
+[2026-05-09 20:18:43] manager ana Monitor PID could not be found or signal could not be sent
+[2026-05-09 20:19:04] manager ana add
+[2026-05-09 20:19:04] manager ana Monitor PID could not be found or signal could not be sent
+[2026-05-09 20:20:15] manager ana list

@@ -6,3 +6,14 @@
 
 [1778049069] manager bob add
 [1778049069] manager bob Pid gasit
+[2026-05-09 20:20:47] manager ana list
+[2026-05-09 20:21:16] manager ana remove_report
+[2026-05-09 20:21:18] manager ana remove_report
+[2026-05-09 20:21:23] manager ana remove_report
+[2026-05-09 20:21:51] manager ana add
+[2026-05-09 20:21:51] manager ana Monitor PID could not be found or signal could not be sent
+[2026-05-09 20:22:12] manager lumi add
+[2026-05-09 20:22:12] manager lumi Monitor PID could not be found or signal could not be sent
+[2026-05-09 20:22:19] manager ana list
+[2026-05-09 20:25:05] manager teo add
+[2026-05-09 20:25:05] manager teo Monitor notified successfully

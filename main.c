@@ -3,10 +3,11 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <fcntl.h>
-//da constante pentru permisiunea intreab
-//S_IRUSR -> macrou pentro cod de permisiune
+//defines permission constants
+//S_IRUSR -> macro for user read permission
 //man 2 chmod
 #include <unistd.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include<time.h>
@@ -23,8 +24,9 @@ typedef struct
     time_t timp;
     char description[100];
 } Report;
-//verifica inainte sa dechizi fisere cu set daca are permisiunea buna
-//stat()->aici am ramas
+
+//checks file permissions before opening the file
+//uses stat() to read file information
 int checkWithStat(char *fisier, int perm)
 {
     struct stat st;
@@ -56,7 +58,7 @@ FILE *openFile(char *nume, char *mode)
     return f;
 }
 
-//creare permisiune cu 0000
+//creates an empty file with 0000 permissions
 void createEmptyFile(char *nume)
 {
     int fd = open(nume, O_CREAT | O_RDWR, 0000);
@@ -70,8 +72,8 @@ void createEmptyFile(char *nume)
     close(fd);
 }
 
-//verificare de permisiuni ->man 2 chmod nu uita
-//intreab daca asta trebe la list sau e ok
+//permission check -> see man 2 chmod
+//checks access rights based on the current role
 void checkPermissions(char *role, char *path1, char *path2, char *path3)
 {
     if(strcmp(role,"inspector")==0)
@@ -152,32 +154,35 @@ void checkDirectoryPermission(char *dirname, char *role)
     }
 }
 
-//TREBE ADAUGAT SI TIMESTAMP !!!
-
-void writeLog(char *dirname,char *role,char *user,char *command)
+void writeLog(char *dirname, char *role, char *user, char *command, time_t timestamp)
 {
     char path[200];
+    struct tm *timeinfo;
+    char timeString[50];
 
     if(strcmp(role,"manager")!=0)
         return;
 
-    sprintf(path,"%s/logged_district",dirname);
+    sprintf(path,"%s/logged_district", dirname);
 
-    FILE *f = fopen(path,"a");
+    FILE *f = fopen(path, "a");
 
-    if(f==NULL)
+    if(f == NULL)
     {
         printf("Cannot open logged_district\n");
         return;
     }
 
-    fprintf(f,"[%ld] %s %s %s\n",
-            time(NULL),role,user,command);
+    timeinfo = localtime(&timestamp);
+    strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S", timeinfo);
+
+    fprintf(f, "[%s] %s %s %s\n",
+            timeString, role, user, command);
 
     fclose(f);
 }
 
-//convert perm to string
+//converts permission bits to string
 void permissionToString(mode_t mode, char string[])
 {
     //R-read USR-user
@@ -192,7 +197,7 @@ void permissionToString(mode_t mode, char string[])
 
     if(mode & S_IRGRP) string[3]='r';
     else string[3]='-';
-    //W-group
+    //W-write permission for group
     if(mode & S_IWGRP) string[4]='w';
     else string[4]='-';
 
@@ -210,8 +215,9 @@ void permissionToString(mode_t mode, char string[])
 
     string[9]='\0';
 }
-//detalii despre report,informatii reutuilizate atta in list
-//cat si in view
+
+//prints report details
+//used by both list and view commands
 void printReport(Report report)
 {
     printf("Report ID: %d\n",report.report_id);
@@ -225,7 +231,7 @@ void printReport(Report report)
     printf("\n");
 }
 
-//verificare dangling link
+//checks for dangling symbolic links
 void checkSymlink(char *dirname)
 {
     char linkname[200];
@@ -264,9 +270,9 @@ void checkSymlink(char *dirname)
     }
 }
 
-//list
-//./prog --role inspector --user ana --list downtown
-//asta se adauga ulterior la celalalt list
+//list command
+//example: ./prog --role inspector --user ana --list downtown
+//this is used to display all reports from a district
 void listCommand(char *dirname)
 {
     char fisier[200];
@@ -315,7 +321,7 @@ void listCommand(char *dirname)
     fclose(f);
 }
 
-//comanda view
+//view command
 void viewCommand(char *dirname, int wantedId)
 {
     char fisier[200];
@@ -349,7 +355,7 @@ void viewCommand(char *dirname, int wantedId)
     fclose(f);
 }
 
-//verificare conditie suplimentara raport
+//additional permission check for reports.dat
 void ensureReportsPermissions(char *path)
 {
     struct stat st;
@@ -370,6 +376,7 @@ void ensureReportsPermissions(char *path)
         printf("reports.dat already has 664 permissions\n");
     }
 }
+
 int directoryExists(char *dirname)
 {
     struct stat st;
@@ -379,6 +386,7 @@ int directoryExists(char *dirname)
 
     return 0;
 }
+
 void createDistrict(char *dirname)
 {
     char path1[200];
@@ -420,7 +428,7 @@ void createDistrict(char *dirname)
     printf("District created successfully!\n");
 }
 
-//creaza linkuri
+//creates or updates symbolic links
 void updateSymlink(char *dirname)
 {
     char linkname[200];
@@ -444,17 +452,14 @@ void updateSymlink(char *dirname)
     printf("Symlink updated: %s -> %s\n",linkname,target);
 }
 
-//comanda add
+//add command
 
-//in add verrifc daca exista director
-//cele 3 fisiere
-//permisiuni verificare
-//link simbolic
-//trebe dacase creeaza un director nou sa adaugi alea 3 fisiere in el
-//verifici daca exitsa directoru daca nu il adaugi
-//pot strge aia cu creeare downtown
-//functie separata de creere director
-
+//in add, check if the district directory exists
+//check the three required files
+//check permissions
+//create or update the symbolic link
+//if the district does not exist, create it with the required files
+//separate function used for district creation
 void addReport(char *dirname, char *user, char *role)
 {
     char path1[200];
@@ -548,7 +553,7 @@ void addReport(char *dirname, char *user, char *role)
 
     printf("Report added successfully!\n");
 
-    writeLog(dirname,role,user,"add");
+    writeLog(dirname,role,user,"add", report.timp);
 
     FILE *cfg = fopen(path2,"r");
     int threshold = 0;
@@ -559,26 +564,26 @@ void addReport(char *dirname, char *user, char *role)
         fclose(cfg);
 
         if(report.severity_level >= threshold)
-            printf("ALERTA! Severity >= threshold\n");
+            printf("ALERT! Severity >= threshold\n");
         else
             printf("No alert\n");
     }
-    //flag pentru verificare operatiei cu succes
+   //flag used to check if the monitor notification was successful
     int contorMonitor=0;
     FILE *m=fopen(".monitor_pid","r");
     if(m==NULL)
     {
-        perror("eroare la deschidere fisier ascuns\n");
-        exit(-1);
+        perror("error opening hidden file");
+
     }
     else
     {
         int monitor_pid;
-        //daca gasim un semnal
+        //if the PID is read successfully
         if(fscanf(m,"%d",&monitor_pid)==1)
         {
-            //kill->transmite semnal , nu omoara !
-            //0 cod pentru transmitere semnal
+            ///kill()-> sends a signal, it does not kill the process here
+            //0 means the signal was sent successfully
             if(kill(monitor_pid,SIGUSR1)==0)
             {
                 contorMonitor=1;
@@ -588,22 +593,21 @@ void addReport(char *dirname, char *user, char *role)
     }
     if(contorMonitor==0)
     {
-        writeLog(dirname,role,user,"Pid-ul nu a putut fi gasit sau semnalul nu a putut fi transmis\n");
-
+        writeLog(dirname,role,user,"Monitor PID could not be found or signal could not be sent", report.timp);
     }
     else
     {
-        writeLog(dirname,role,user,"Pid gasit");
+        writeLog(dirname,role,user,"Monitor notified successfully", report.timp);
 
     }
 
 }
 
-//comanda remove
+//remove report command
 void removeReport(char *dirname, int wantedId, char *role, char *user)
 {
     char fisier[200];
-    //ne asiguram ca se sterge si linkul daca stergem districtul
+    //make sure the symbolic link is also removed if needed
     struct stat st;
     char linkname[200];
     sprintf(linkname,"active_reports-%s",dirname);
@@ -674,57 +678,57 @@ void removeReport(char *dirname, int wantedId, char *role, char *user)
 
     printf("Report removed successfully!\n");
 
-    writeLog(dirname,role,user,"remove_report");
+    writeLog(dirname,role,user,"remove_report",time(NULL));
 }
-//functie ajutatoare pentru stergerea operatiilor din district
-//pot face unlink doar daca stergerea de director a reusit
-//comanda remove_district
+
+//helper function for removing a district
+//unlink should be done only after the directory was removed successfully
+//remove_district command
  void remove_district(char*idDistrict,char *role)
  {
      checkDirectoryPermission(idDistrict,role);
      int pid=fork();
      if(pid<0)
      {
-         printf("Apare o eroare la procesul de creeare al copilului");
+         printf("Error while creating child process\n");
          exit(0);
      }
-     //trebuie facuta legatura cu comanda externa rm -rf <district_directory>
-     //pid=0 inseamna ca procesul copil a fost creat cu succes
+     //execute external command: rm -rf <district_directory>
+     //pid == 0 means this is the child process
      else if(pid==0)
      {
-         printf("Am ajuns in procesul parinte");
+         printf("Child process started\n");
          char *arguments[]={"rm","-rf",idDistrict,NULL};
          execvp("rm",arguments);
          exit(0);
      }
-     //execlp->list de argumente
-     //execvp->vector de argumente
-     //pid>0 inseamna ca este parintele procesului,NU COPILUL!
+     //execlp -> list of arguments
+     //execvp -> vector of arguments
+     //pid > 0 means this is the parent process
      else if(pid>0)
      {
-         printf("suntem in procesul copil\n");
+         printf("Parent process is waiting for child process\n");
          int status_ptr;
          //WUNTRACED-also return if a child has stopped
          if(waitpid(pid,&status_ptr,WUNTRACED)==-1)
              //-1 meaning wait for any child process.
          {
-                 printf("Eroare procesul nu s-a oprit inca\n");
+             printf("Error while waiting for child process\n");
                  exit(-1);
          }
           char linkname[200];
           sprintf(linkname,"active_reports-%s",idDistrict);
 
-          if(unlink(linkname))
+          if(unlink(linkname)==0)
           {
-              printf("am rupt legatura");
+             printf("Symbolic link removed\n");
           }
 
      }
 
 }
 
-
-//functie update_thresold
+//update_threshold function
 void updateThreshold(char *dirname,int value,char *role,char *user)
 {
     char fisier[200];
@@ -765,7 +769,7 @@ void updateThreshold(char *dirname,int value,char *role,char *user)
 
     printf("Threshold updated successfully!\n");
 
-    writeLog(dirname,role,user,"update_threshold");
+    writeLog(dirname,role,user,"update_threshold",time(NULL));
 }
 
 int parse_condition(const char *input, char *field, char *op, char *value)
@@ -838,7 +842,7 @@ int match_condition(Report *r, const char *field, const char *op, const char *va
     return 0;
 }
 
-//comanfa filter
+//filter command
 void filterCommand(char *dirname, int conditionCount, char *conditions[])
 {
     char fisier[200];
@@ -936,7 +940,7 @@ int main(int argc,char *argv[])
         listCommand(dirname);
 
         if(strcmp(argv[2],"manager")==0)
-            writeLog(dirname,argv[2],argv[4],"list");
+            writeLog(dirname,argv[2],argv[4],"list",time(NULL));
 
         free(dirname);
         return 0;
@@ -965,7 +969,7 @@ int main(int argc,char *argv[])
         viewCommand(dirname,atoi(argv[7]));
 
         if(strcmp(argv[2],"manager")==0)
-            writeLog(dirname,argv[2],argv[4],"view");
+            writeLog(dirname,argv[2],argv[4],"view",time(NULL));
 
         free(dirname);
         return 0;
@@ -1030,7 +1034,7 @@ int main(int argc,char *argv[])
         filterCommand(dirname,argc-7,&argv[7]);
 
         if(strcmp(argv[2],"manager")==0)
-            writeLog(dirname,argv[2],argv[4],"filter");
+            writeLog(dirname,argv[2],argv[4],"filter",time(NULL));
 
         free(dirname);
         return 0;
