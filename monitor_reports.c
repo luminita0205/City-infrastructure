@@ -28,6 +28,29 @@ void createPidFile()
     close(contorOk);
 }
 
+//new function for phase 3 to check if there s already a monitor running
+void checkExistingMonitor()
+{
+    FILE *f = fopen(".monitor_pid", "r");
+
+    if(f != NULL)
+    {
+        int existing_pid;
+
+        if(fscanf(f, "%d", &existing_pid) == 1)
+        {
+            printf("Monitor already running %d\n", existing_pid);
+            //to avoid a waiting time in the buffer zone
+            //to print the output directly
+            fflush(stdout);
+        }
+
+        fclose(f);
+        exit(1);
+    }
+
+}
+//error->hidden file not find to add
 //the program stops only when Ctrl+C is pressed -> SIGINT
 void handler(int semnal)
 {
@@ -35,6 +58,7 @@ void handler(int semnal)
     if(semnal==SIGINT)
     {
     printf("Monitor stopped\n");
+     fflush(stdout);
     unlink(".monitor_pid");
     exit(0);
     }
@@ -42,6 +66,7 @@ void handler(int semnal)
     else if(semnal==SIGUSR1)
     {
           printf("New report added!\n");
+           fflush(stdout);
     }
 }
 
@@ -49,9 +74,14 @@ void handler(int semnal)
 
 int main(void)
 {
+     checkExistingMonitor();
+
      createPidFile();
      //the operating system automatically sends the signal number to the handler
     //sigaction structure used for signal handling
+     printf("Monitor started with PID %d\n", getpid());
+     fflush(stdout);
+
      struct sigaction act;
      act.sa_flags = 0;
      act.sa_handler = &handler;
