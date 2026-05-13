@@ -4,7 +4,7 @@
 #include <string.h>
 #include<stdlib.h>
 #include <signal.h>
-//pidul procesului care ruleaza programul
+//pid of the current procces
 void createPidFile()
 {
     int contorOk;
@@ -58,7 +58,7 @@ void handler(int semnal)
     if(semnal==SIGINT)
     {
     printf("Monitor stopped\n");
-     fflush(stdout);
+    fflush(stdout);
     unlink(".monitor_pid");
     exit(0);
     }

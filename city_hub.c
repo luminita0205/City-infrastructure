@@ -5,7 +5,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include<string.h>
-
+#include <fcntl.h>
 void start_monitor()
 {
    pid_t hub_mon=fork();
@@ -55,7 +55,7 @@ void start_monitor()
         }
         if(monitor_pid>0)
         {
-              close(fd[1]);
+            close(fd[1]);
             char message[256];
             int size;
             while((size=read(fd[0],message,sizeof(message)-1))>0)
@@ -68,6 +68,7 @@ void start_monitor()
                     printf("The monitor has stopped for a certain reason\n");
                     break;
                 }
+
 
             }
             close(fd[0]);
@@ -83,8 +84,45 @@ void start_monitor()
    }
 
 }
-int main(void)
+//add id to add_report
+//kill procces to make sure the process stops
+//to add error case when we can't find a monitor
+//add more errors
+
+//kill the procces to make sure the hidden file .monitor_pid is deleted and it keeps the monitor_reports function the same
+void stop_monitor()
 {
-    start_monitor();
+      char string[120];
+      snprintf(string,sizeof(string),".monitor_pid");
+      int fd=open(".monitor_pid",O_RDONLY, 0644);
+      if(fd==-1)
+      {
+        perror("eroare la deschidere fisier");
+        return;
+      }
+      char buffer[120];
+      int n=read(fd,buffer,sizeof(buffer)-1);
+      buffer[n]='\0';
+      int mon_pid=atoi(buffer);
+      kill(mon_pid,SIGINT);
+      close(fd);
+
+}
+
+int main(int argc,char *argv[])
+{
+    if(argc<2)
+    {
+         printf("Introduce a valid number of arguments!");
+         exit(0);
+    }
+    if(strstr(argv[1],"start_monitor"))
+    {
+        start_monitor();
+    }
+    if(strstr(argv[1],"stop_monitor"))
+    {
+        stop_monitor();
+    }
     return 0;
 }

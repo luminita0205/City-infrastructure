@@ -513,9 +513,11 @@ void addReport(char *dirname, char *user, char *role)
     report.report_id = id;
 
     strcpy(report.inspector_name,user);
+    printf("Latitude: ");
+    scanf("%f",&report.latitude);
 
-    report.latitude = 45.75;
-    report.longitude = 21.22;
+    printf("Longitude: ");
+    scanf("%f",&report.longitude);
 
     printf("Category: ");
     scanf("%29s",report.issue_category);
