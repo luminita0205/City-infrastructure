@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include<string.h>
 #include <fcntl.h>
@@ -109,6 +110,71 @@ void stop_monitor()
 
 }
 
+//the total score
+void calculate_scores(char **districts, int n)
+{
+    printf("Combined workload report\n");
+    for(int i=0;i<n;i++)
+    {
+        struct stat st;
+        //check if the district exists and if it s a directory
+        if(stat(districts[i], &st) == -1 || !S_ISDIR(st.st_mode))
+        {
+            printf("District %s does not exist\n", districts[i]);
+            //move on to the next one
+            continue;
+        }
+        int fd[2];
+        if(pipe(fd)<0)
+        {
+            //failure to pipe()
+            exit(1);
+        }
+        //fork for scorer
+        pid_t scorer_pid=fork();
+        if(scorer_pid<0)
+        {
+            printf("Error creating child process->scorer_pid");
+            return;
+        }
+        else if(scorer_pid==0)
+        {
+            printf("Child process->scorer_pid");
+
+            close(fd[0]);
+
+            dup2(fd[1], STDOUT_FILENO);
+
+            close(fd[1]);
+
+            //replace the current procces with scorer.c
+            execl("./scorer", "scorer",districts[i],NULL);
+
+            //failure to execl
+             perror("execl scorer failure");
+             exit(1);
+        }
+        else if(scorer_pid>0)
+        {
+            close(fd[1]);
+            char message[256];
+            int size;
+            while((size=read(fd[0],message,sizeof(message)-1))>0)
+            {
+                message[size]='\0';
+                printf("%s",message);
+
+            }
+            close(fd[0]);
+
+
+           waitpid(scorer_pid, NULL, 0);
+        }
+
+    }
+
+}
+
 int main(int argc,char *argv[])
 {
     if(argc<2)
@@ -120,9 +186,19 @@ int main(int argc,char *argv[])
     {
         start_monitor();
     }
-    if(strstr(argv[1],"stop_monitor"))
+    else  if(strstr(argv[1],"stop_monitor"))
     {
         stop_monitor();
+    }
+    else if(strstr(argv[1],"calculate_scores"))
+    {
+        if(argc<3)
+        {
+            printf("Introduce a valid number of district");
+            exit(-1);
+        }
+        calculate_scores(&argv[2],argc-2);
+        //size->argc-2
     }
     return 0;
 }
