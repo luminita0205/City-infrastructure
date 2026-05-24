@@ -4,6 +4,7 @@
 #include <string.h>
 #include<stdlib.h>
 #include <signal.h>
+
 //pid of the current procces
 void createPidFile()
 {
@@ -24,7 +25,6 @@ void createPidFile()
     sprintf(string,"%d",pid);
     write(contorOk,string,strlen(string));
 
-     //!!important step
     close(contorOk);
 }
 
@@ -50,22 +50,22 @@ void checkExistingMonitor()
     }
 
 }
-//error->hidden file not find to add
+
 //the program stops only when Ctrl+C is pressed -> SIGINT
 void handler(int semnal)
 {
     //signal used to stop the program
     if(semnal==SIGINT)
     {
-    printf("Monitor stopped\n");
-    fflush(stdout);
-    unlink(".monitor_pid");
-    exit(0);
+      printf("Monitor stopped\n");
+      fflush(stdout);
+      unlink(".monitor_pid");
+      exit(0);
     }
     //signal received when a new report is added
     else if(semnal==SIGUSR1)
     {
-          printf("New report added!\n");
+           printf("New report added!\n");
            fflush(stdout);
     }
 }
@@ -85,8 +85,10 @@ int main(void)
      struct sigaction act;
      act.sa_flags = 0;
      act.sa_handler = &handler;
+     //init the mask right
+     sigemptyset(&act.sa_mask);
 
-
+     //ties the signals to the handler
      sigaction(SIGINT,&act,NULL);
      sigaction(SIGUSR1,&act,NULL);
      while(1)

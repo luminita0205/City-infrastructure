@@ -64,12 +64,17 @@ void start_monitor()
                 message[size]='\0';
                 printf("%s",message);
                 //we search for the error messages
-                if(strstr(message,"Monitor already running")||strstr(message,"Monitor stopped"))
+                if(strstr(message,"Monitor already running"))
                 {
-                    printf("The monitor has stopped for a certain reason\n");
+                    printf("A monitor is already running, so a new one was not started.\n");
                     break;
                 }
 
+                if(strstr(message,"Monitor stopped"))
+                {
+                    printf("The monitor was closed successfully.\n");
+                    break;
+                }
 
             }
             close(fd[0]);
@@ -81,14 +86,10 @@ void start_monitor()
    else
    {
         printf("Parent process. Child PID = %d\n", hub_mon);
-
    }
 
 }
-//add id to add_report
-//kill procces to make sure the process stops
-//to add error case when we can't find a monitor
-//add more errors
+
 
 //kill the procces to make sure the hidden file .monitor_pid is deleted and it keeps the monitor_reports function the same
 void stop_monitor()
@@ -105,7 +106,15 @@ void stop_monitor()
       int n=read(fd,buffer,sizeof(buffer)-1);
       buffer[n]='\0';
       int mon_pid=atoi(buffer);
-      kill(mon_pid,SIGINT);
+      if(kill(mon_pid,SIGINT)==0)
+      {
+        printf("Closing the monitor...\n");
+      }
+      else
+     {
+        perror("kill");
+     }
+
       close(fd);
 
 }
@@ -121,7 +130,6 @@ void calculate_scores(char **districts, int n)
         if(stat(districts[i], &st) == -1 || !S_ISDIR(st.st_mode))
         {
             printf("District %s does not exist\n", districts[i]);
-            //move on to the next one
             continue;
         }
         int fd[2];
@@ -167,7 +175,7 @@ void calculate_scores(char **districts, int n)
             }
             close(fd[0]);
 
-
+           //to avoid a zombie process
            waitpid(scorer_pid, NULL, 0);
         }
 
@@ -175,30 +183,68 @@ void calculate_scores(char **districts, int n)
 
 }
 
-int main(int argc,char *argv[])
+int main()
 {
-    if(argc<2)
+    char linie[300];
+    char *args[20];
+    int argc;
+
+    printf("Welcome to city_hub:)\n");
+    //loop
+    while(1)
     {
-         printf("Introduce a valid number of arguments!");
-         exit(0);
-    }
-    if(strstr(argv[1],"start_monitor"))
-    {
-        start_monitor();
-    }
-    else  if(strstr(argv[1],"stop_monitor"))
-    {
-        stop_monitor();
-    }
-    else if(strstr(argv[1],"calculate_scores"))
-    {
-        if(argc<3)
+
+
+        if(fgets(linie,sizeof(linie),stdin)==NULL)
         {
-            printf("Introduce a valid number of district");
-            exit(-1);
+             break;
         }
-        calculate_scores(&argv[2],argc-2);
-        //size->argc-2
+
+        linie[strcspn(linie,"\n")]='\0';
+
+        argc=0;
+        char *p=strtok(linie," ");
+        //split the line into separate words
+        while(p!=NULL && argc<20)
+        {
+             args[argc]=p;
+             argc++;
+             p=strtok(NULL," ");
+        }
+        //if the user press ENTER
+        if(argc == 0)
+        {
+            continue;
+        }
+
+        if(strcmp(args[0], "start_monitor") == 0)
+        {
+            printf("Monitor is up to start!\n");
+            start_monitor();
+        }
+        else if(strcmp(args[0], "stop_monitor") == 0)
+        {
+            printf("Monitor will stop!\n");
+            stop_monitor();
+        }
+        else if(strcmp(args[0], "calculate_scores") == 0)
+        {
+            if(argc < 2)
+            {
+                printf("Introduce a valid number of districts\n");
+                continue;
+            }
+            calculate_scores(&args[1], argc - 1);
+        }
+        else if(strcmp(args[0], "exit") == 0)
+        {
+            printf("Exiting city_hub\n");
+            break;
+        }
+        else
+        {
+               printf("Unknown command\n");
+        }
     }
     return 0;
 }

@@ -3,9 +3,6 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <fcntl.h>
-//defines permission constants
-//S_IRUSR -> macro for user read permission
-//man 2 chmod
 #include <unistd.h>
 #include <signal.h>
 #include <stdio.h>
@@ -25,25 +22,7 @@ typedef struct
     char description[100];
 } Report;
 
-//checks file permissions before opening the file
-//uses stat() to read file information
-int checkWithStat(char *fisier, int perm)
-{
-    struct stat st;
-
-    if(stat(fisier,&st) == -1)
-    {
-        printf("Bad Stat Info\n");
-        return 0;
-    }
-
-    if(st.st_mode & perm)
-    {
-        return 1;
-    }
-
-    return 0;
-}
+//FILE HELPERS
 
 FILE *openFile(char *nume, char *mode)
 {
@@ -58,11 +37,13 @@ FILE *openFile(char *nume, char *mode)
     return f;
 }
 
+
 //creates an empty file with 0000 permissions
 void createEmptyFile(char *nume)
 {
     int fd = open(nume, O_CREAT | O_RDWR, 0000);
-
+    //O_CREAT->create
+    //O_RDWR->read and write
     if(fd == -1)
     {
         perror(nume);
@@ -72,15 +53,100 @@ void createEmptyFile(char *nume)
     close(fd);
 }
 
+
+//DIRECTORY CREATION
+
+int directoryExists(char *dirname)
+{
+    struct stat st;
+    //structure with informations about files or directory
+
+    if(stat(dirname, &st) == 0 && S_ISDIR(st.st_mode))
+        return 1;
+
+    return 0;
+}
+
+
+void createDistrict(char *dirname)
+{
+    char path1[200];
+    char path2[200];
+    char path3[200];
+
+    if(directoryExists(dirname))
+    {
+        printf("District already exists.\n");
+        return;
+    }
+
+    if(mkdir(dirname,0750)==-1)
+    {
+        perror("Error mkdir");
+        return;
+    }
+
+    //string format->sprintf
+    sprintf(path1,"%s/reports.dat",dirname);
+    sprintf(path2,"%s/district.cfg",dirname);
+    sprintf(path3,"%s/logged_district",dirname);
+
+    createEmptyFile(path1);
+    createEmptyFile(path2);
+    createEmptyFile(path3);
+
+    chmod(path1,0664);
+    chmod(path2,0640);
+    chmod(path3,0644);
+
+    FILE *cfg = fopen(path2,"w");
+
+    if(cfg!=NULL)
+    {
+        fprintf(cfg,"threshold=2\n");
+        fclose(cfg);
+    }
+    else
+    {
+        perror("district.cfg");
+    }
+
+    printf("District created successfully!\n");
+}
+
+//PERMISSION HELPERS
+
+
+//uses stat() to read file information
+int checkWithStat(char *fisier, int perm)
+{
+    struct stat st;
+
+    if(stat(fisier,&st) == -1)
+    {
+        printf("Cannot get file information\n");
+        return 0;
+    }
+    //checks if the file has the right permission
+    if(st.st_mode & perm)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
 //permission check -> see man 2 chmod
 //checks access rights based on the current role
 void checkPermissions(char *role, char *path1, char *path2, char *path3)
 {
+    //manager->owner
+    //inspector->group
     if(strcmp(role,"inspector")==0)
     {
         if(!checkWithStat(path1,S_IRGRP) || !checkWithStat(path1,S_IWGRP))
         {
-            printf("Inspector cannot access reports.dat\n");
+            printf("Inspector cannot read or write in reports.dat\n");
             exit(1);
         }
 
@@ -132,7 +198,7 @@ void checkDirectoryPermission(char *dirname, char *role)
         printf("District not found\n");
         exit(1);
     }
-
+    //manager->owner/user
     if(strcmp(role,"manager")==0)
     {
         if(!(st.st_mode & S_IRUSR) ||
@@ -154,38 +220,35 @@ void checkDirectoryPermission(char *dirname, char *role)
     }
 }
 
-void writeLog(char *dirname, char *role, char *user, char *command, time_t timestamp)
+
+//additional permission check for reports.dat
+void ensureReportsPermissions(char *path)
 {
-    char path[200];
-    struct tm *timeinfo;
-    char timeString[50];
+    struct stat st;
 
-    if(strcmp(role,"manager")!=0)
-        return;
-
-    sprintf(path,"%s/logged_district", dirname);
-
-    FILE *f = fopen(path, "a");
-
-    if(f == NULL)
+    if(stat(path,&st)==-1)
     {
-        printf("Cannot open logged_district\n");
+        printf("Cannot get file information\n");
         return;
     }
-
-    timeinfo = localtime(&timestamp);
-    strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S", timeinfo);
-
-    fprintf(f, "[%s] %s %s %s\n",
-            timeString, role, user, command);
-
-    fclose(f);
+    //0777->mask for permission bits
+    if((st.st_mode & 0777) != 0664)
+    {
+        chmod(path,0664);
+        printf("reports.dat permissions set to 664\n");
+    }
+    else
+    {
+        printf("reports.dat already has 664 permissions\n");
+    }
 }
+
+//DISPLAY HELPERS
 
 //converts permission bits to string
 void permissionToString(mode_t mode, char string[])
 {
-    //R-read USR-user
+    //USR-user
     if(mode & S_IRUSR) string[0]='r';
     else string[0]='-';
 
@@ -195,15 +258,17 @@ void permissionToString(mode_t mode, char string[])
     if(mode & S_IXUSR) string[2]='x';
     else string[2]='-';
 
+    //GRP->group
     if(mode & S_IRGRP) string[3]='r';
     else string[3]='-';
-    //W-write permission for group
+
     if(mode & S_IWGRP) string[4]='w';
     else string[4]='-';
 
     if(mode & S_IXGRP) string[5]='x';
     else string[5]='-';
 
+    //OTH-others
     if(mode & S_IROTH) string[6]='r';
     else string[6]='-';
 
@@ -231,6 +296,67 @@ void printReport(Report report)
     printf("\n");
 }
 
+
+//LOG-logged_district
+
+void writeLog(char *dirname, char *role, char *user, char *command, time_t timestamp)
+{
+    char path[200];
+    struct tm *timeinfo;
+    //struct for year,month,day
+    char timeString[50];
+
+    // only the manager role may write
+    if(strcmp(role,"manager")!=0)
+        return;
+
+    sprintf(path,"%s/logged_district", dirname);
+
+    FILE *f = fopen(path, "a");
+    //a -append to keep the history log
+    if(f == NULL)
+    {
+        printf("Cannot open logged_district\n");
+        return;
+    }
+
+    timeinfo = localtime(&timestamp);
+    //localtime->struct :year month day hour minute sec
+    strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S", timeinfo);
+
+    fprintf(f, "[%s] %s %s %s\n",
+            timeString, role, user, command);
+
+    fclose(f);
+}
+
+//SYMBOLIC LINKS
+
+//creates or updates symbolic links
+void updateSymlink(char *dirname)
+{
+    char linkname[200];
+    char target[200];
+    struct stat st;
+
+    sprintf(linkname,"active_reports-%s",dirname);
+    sprintf(target,"%s/reports.dat",dirname);
+
+    if(lstat(linkname,&st)==0)
+    {
+        unlink(linkname);
+    }
+
+    if(symlink(target,linkname)==-1)
+    {
+        perror("symlink");
+        return;
+    }
+
+    printf("Symlink updated: %s -> %s\n",linkname,target);
+}
+
+
 //checks for dangling symbolic links
 void checkSymlink(char *dirname)
 {
@@ -249,6 +375,7 @@ void checkSymlink(char *dirname)
 
     if(S_ISLNK(st.st_mode))
     {
+        //reads where the link goes
         n = readlink(linkname,target,sizeof(target)-1);
 
         if(n==-1)
@@ -270,9 +397,172 @@ void checkSymlink(char *dirname)
     }
 }
 
+//COMANDS
+
+//add command
+void addReport(char *dirname, char *user, char *role)
+{
+    char path1[200];
+    char path2[200];
+    char path3[200];
+
+    createDistrict(dirname);
+
+    sprintf(path1,"%s/reports.dat",dirname);
+    sprintf(path2,"%s/district.cfg",dirname);
+    sprintf(path3,"%s/logged_district",dirname);
+
+    checkDirectoryPermission(dirname,role);
+    //file permissions
+    checkPermissions(role,path1,path2,path3);
+    //reports.dat
+    if(access(path1,F_OK)!=0)
+        createEmptyFile(path1);
+
+    ensureReportsPermissions(path1);
+    updateSymlink(dirname);
+
+    //district.cfg
+    if(access(path2,F_OK)!=0)
+    {
+        createEmptyFile(path2);
+         FILE *cfg = fopen(path2, "w");
+        if(cfg != NULL)
+        {
+            fprintf(cfg, "threshold=2\n");
+            fclose(cfg);
+        }
+
+        chmod(path2,0640);
+    }
+    //logged_district
+    if(access(path3,F_OK)!=0)
+    {
+        createEmptyFile(path3);
+        chmod(path3,0644);
+    }
+
+    Report report;
+    Report x;
+
+    FILE *temp = fopen(path1,"rb");
+    int id = 1;
+    //id count
+    if(temp != NULL)
+    {
+        while(fread(&x,sizeof(Report),1,temp)==1)
+        {
+            if(x.report_id >= id)
+                id = x.report_id + 1;
+        }
+
+        fclose(temp);
+    }
+
+    report.report_id = id;
+
+    strcpy(report.inspector_name,user);
+
+    printf("Latitude: ");
+    scanf("%f",&report.latitude);
+
+    printf("Longitude: ");
+    scanf("%f",&report.longitude);
+
+    printf("Category: ");
+    scanf("%29s",report.issue_category);
+
+    printf("Severity (1-3): ");
+    scanf("%d",&report.severity_level);
+
+    if(report.severity_level < 1 || report.severity_level > 3)
+    {
+        printf("Invalid severity level\n");
+        return;
+    }
+
+    printf("Description: ");
+    scanf(" %99[^\n]",report.description);
+
+    report.timp = time(NULL);
+
+    int fd = open(path1,O_WRONLY | O_APPEND);
+    //O_WRONLY->write
+    //O_APPEND->write only at the end
+
+    if(fd == -1)
+    {
+        printf("Cannot open reports.dat\n");
+        return;
+    }
+
+    if(write(fd,&report,sizeof(Report)) != sizeof(Report))
+    {
+        printf("Write error\n");
+        close(fd);
+        return;
+    }
+
+    close(fd);
+
+    printf("Report added successfully!\n");
+
+    writeLog(dirname,role,user,"add", report.timp);
+
+     FILE *cfg = fopen(path2,"r");
+     int threshold = 2;
+
+    if(cfg != NULL)
+    {
+        if(fscanf(cfg,"threshold=%d",&threshold) != 1)
+        {
+            printf("No valid threshold found, using default threshold=2\n");
+            threshold = 2;
+        }
+
+        fclose(cfg);
+
+    if(report.severity_level >= threshold)
+        printf("Alert! Severity >= threshold\n");
+    else
+        printf("No alert\n");
+    }
+
+   //flag used to check if the monitor notification was successful
+    int contorMonitor=0;
+    FILE *m=fopen(".monitor_pid","r");
+    if(m!=NULL)
+    {
+
+        int monitor_pid;
+        if(fscanf(m,"%d",&monitor_pid)==1)
+        {
+            ///kill()-> sends a signal, it does not kill the process here
+            //0 means the signal was sent successfully
+            if(kill(monitor_pid,SIGUSR1)==0)
+            {
+                contorMonitor=1;
+            }
+            else
+            {
+                unlink(".monitor_pid");
+            }
+        }
+        fclose(m);
+    }
+    if(contorMonitor==0)
+    {
+        writeLog(dirname,role,user,"Monitor PID could not be found or signal could not be sent", report.timp);
+    }
+    else
+    {
+        writeLog(dirname,role,user,"Monitor notified successfully", report.timp);
+
+    }
+
+}
+
 //list command
-//example: ./prog --role inspector --user ana --list downtown
-//this is used to display all reports from a district
 void listCommand(char *dirname)
 {
     char fisier[200];
@@ -355,255 +645,8 @@ void viewCommand(char *dirname, int wantedId)
     fclose(f);
 }
 
-//additional permission check for reports.dat
-void ensureReportsPermissions(char *path)
-{
-    struct stat st;
 
-    if(stat(path,&st)==-1)
-    {
-        printf("Cannot read reports.dat info\n");
-        return;
-    }
 
-    if((st.st_mode & 0777) != 0664)
-    {
-        chmod(path,0664);
-        printf("reports.dat permissions changed to 664\n");
-    }
-    else
-    {
-        printf("reports.dat already has 664 permissions\n");
-    }
-}
-
-int directoryExists(char *dirname)
-{
-    struct stat st;
-
-    if(stat(dirname, &st) == 0 && S_ISDIR(st.st_mode))
-        return 1;
-
-    return 0;
-}
-
-void createDistrict(char *dirname)
-{
-    char path1[200];
-    char path2[200];
-    char path3[200];
-
-    if(directoryExists(dirname))
-    {
-        printf("District already exists.\n");
-        return;
-    }
-
-    if(mkdir(dirname,0750)==-1)
-    {
-        perror("mkdir");
-        return;
-    }
-
-    sprintf(path1,"%s/reports.dat",dirname);
-    sprintf(path2,"%s/district.cfg",dirname);
-    sprintf(path3,"%s/logged_district",dirname);
-
-    createEmptyFile(path1);
-    createEmptyFile(path2);
-    createEmptyFile(path3);
-
-    FILE *cfg = fopen(path2,"w");
-
-    if(cfg!=NULL)
-    {
-        fprintf(cfg,"threshold=2\n");
-        fclose(cfg);
-    }
-
-    chmod(path1,0664);
-    chmod(path2,0640);
-    chmod(path3,0644);
-
-    printf("District created successfully!\n");
-}
-
-//creates or updates symbolic links
-void updateSymlink(char *dirname)
-{
-    char linkname[200];
-    char target[200];
-    struct stat st;
-
-    sprintf(linkname,"active_reports-%s",dirname);
-    sprintf(target,"%s/reports.dat",dirname);
-
-    if(lstat(linkname,&st)==0)
-    {
-        unlink(linkname);
-    }
-
-    if(symlink(target,linkname)==-1)
-    {
-        perror("symlink");
-        return;
-    }
-
-    printf("Symlink updated: %s -> %s\n",linkname,target);
-}
-
-//add command
-
-//in add, check if the district directory exists
-//check the three required files
-//check permissions
-//create or update the symbolic link
-//if the district does not exist, create it with the required files
-//separate function used for district creation
-void addReport(char *dirname, char *user, char *role)
-{
-    char path1[200];
-    char path2[200];
-    char path3[200];
-
-    createDistrict(dirname);
-
-    sprintf(path1,"%s/reports.dat",dirname);
-    sprintf(path2,"%s/district.cfg",dirname);
-    sprintf(path3,"%s/logged_district",dirname);
-
-    checkDirectoryPermission(dirname,role);
-    checkPermissions(role,path1,path2,path3);
-
-    if(access(path1,F_OK)!=0)
-        createEmptyFile(path1);
-
-    ensureReportsPermissions(path1);
-    updateSymlink(dirname);
-
-    if(access(path2,F_OK)!=0)
-    {
-        createEmptyFile(path2);
-        chmod(path2,0640);
-    }
-
-    if(access(path3,F_OK)!=0)
-    {
-        createEmptyFile(path3);
-        chmod(path3,0644);
-    }
-
-    Report report;
-    Report x;
-
-    FILE *temp = fopen(path1,"rb");
-    int id = 1;
-
-    if(temp != NULL)
-    {
-        while(fread(&x,sizeof(Report),1,temp)==1)
-        {
-            if(x.report_id >= id)
-                id = x.report_id + 1;
-        }
-
-        fclose(temp);
-    }
-
-    report.report_id = id;
-
-    strcpy(report.inspector_name,user);
-    printf("Latitude: ");
-    scanf("%f",&report.latitude);
-
-    printf("Longitude: ");
-    scanf("%f",&report.longitude);
-
-    printf("Category: ");
-    scanf("%29s",report.issue_category);
-
-    printf("Severity (1-3): ");
-    scanf("%d",&report.severity_level);
-
-    if(report.severity_level < 1 || report.severity_level > 3)
-    {
-        printf("Invalid severity level\n");
-        return;
-    }
-
-    printf("Description: ");
-    scanf(" %99[^\n]",report.description);
-
-    report.timp = time(NULL);
-
-    int fd = open(path1,O_WRONLY | O_APPEND);
-
-    if(fd == -1)
-    {
-        printf("Cannot open reports.dat\n");
-        return;
-    }
-
-    if(write(fd,&report,sizeof(Report)) != sizeof(Report))
-    {
-        printf("Write error\n");
-        close(fd);
-        return;
-    }
-
-    close(fd);
-
-    printf("Report added successfully!\n");
-
-    writeLog(dirname,role,user,"add", report.timp);
-
-    FILE *cfg = fopen(path2,"r");
-    int threshold = 0;
-
-    if(cfg != NULL)
-    {
-        fscanf(cfg,"threshold=%d",&threshold);
-        fclose(cfg);
-
-        if(report.severity_level >= threshold)
-            printf("ALERT! Severity >= threshold\n");
-        else
-            printf("No alert\n");
-    }
-   //flag used to check if the monitor notification was successful
-    int contorMonitor=0;
-    FILE *m=fopen(".monitor_pid","r");
-    if(m==NULL)
-    {
-        perror("error opening hidden file");
-
-    }
-    else
-    {
-        int monitor_pid;
-        //if the PID is read successfully
-        if(fscanf(m,"%d",&monitor_pid)==1)
-        {
-            ///kill()-> sends a signal, it does not kill the process here
-            //0 means the signal was sent successfully
-            if(kill(monitor_pid,SIGUSR1)==0)
-            {
-                contorMonitor=1;
-            }
-        }
-        fclose(m);
-    }
-    if(contorMonitor==0)
-    {
-        writeLog(dirname,role,user,"Monitor PID could not be found or signal could not be sent", report.timp);
-    }
-    else
-    {
-        writeLog(dirname,role,user,"Monitor notified successfully", report.timp);
-
-    }
-
-}
 
 //remove report command
 void removeReport(char *dirname, int wantedId, char *role, char *user)
@@ -629,7 +672,7 @@ void removeReport(char *dirname, int wantedId, char *role, char *user)
     sprintf(fisier,"%s/reports.dat",dirname);
 
     fd = open(fisier,O_RDWR);
-
+    //O_RDWR->read and write
     if(fd==-1)
     {
         printf("Cannot open reports.dat\n");
@@ -666,7 +709,7 @@ void removeReport(char *dirname, int wantedId, char *role, char *user)
         lseek(fd,(i-1)*sizeof(Report),SEEK_SET);
         write(fd,&temp,sizeof(Report));
     }
-
+    //it makes the size of the file smaller
     ftruncate(fd,(total-1)*sizeof(Report));
 
 
@@ -683,54 +726,9 @@ void removeReport(char *dirname, int wantedId, char *role, char *user)
     writeLog(dirname,role,user,"remove_report",time(NULL));
 }
 
-//helper function for removing a district
-//unlink should be done only after the directory was removed successfully
-//remove_district command
- void remove_district(char*idDistrict,char *role)
- {
-     checkDirectoryPermission(idDistrict,role);
-     int pid=fork();
-     if(pid<0)
-     {
-         printf("Error while creating child process\n");
-         exit(0);
-     }
-     //execute external command: rm -rf <district_directory>
-     //pid == 0 means this is the child process
-     else if(pid==0)
-     {
-         printf("Child process started\n");
-         char *arguments[]={"rm","-rf",idDistrict,NULL};
-         execvp("rm",arguments);
-         exit(0);
-     }
-     //execlp -> list of arguments
-     //execvp -> vector of arguments
-     //pid > 0 means this is the parent process
-     else if(pid>0)
-     {
-         printf("Parent process is waiting for child process\n");
-         int status_ptr;
-         //WUNTRACED-also return if a child has stopped
-         if(waitpid(pid,&status_ptr,WUNTRACED)==-1)
-             //-1 meaning wait for any child process.
-         {
-             printf("Error while waiting for child process\n");
-                 exit(-1);
-         }
-          char linkname[200];
-          sprintf(linkname,"active_reports-%s",idDistrict);
 
-          if(unlink(linkname)==0)
-          {
-             printf("Symbolic link removed\n");
-          }
 
-     }
-
-}
-
-//update_threshold function
+//update_threshold command
 void updateThreshold(char *dirname,int value,char *role,char *user)
 {
     char fisier[200];
@@ -740,6 +738,12 @@ void updateThreshold(char *dirname,int value,char *role,char *user)
     if(strcmp(role,"manager")!=0)
     {
         printf("Access denied. Manager only.\n");
+        return;
+    }
+
+    if(value < 1 || value > 3)
+    {
+        printf("Invalid threshold value\n");
         return;
     }
 
@@ -764,7 +768,6 @@ void updateThreshold(char *dirname,int value,char *role,char *user)
         printf("Cannot open district.cfg\n");
         return;
     }
-
     fprintf(f,"threshold=%d\n",value);
 
     fclose(f);
@@ -774,6 +777,8 @@ void updateThreshold(char *dirname,int value,char *role,char *user)
     writeLog(dirname,role,user,"update_threshold",time(NULL));
 }
 
+//FILTER
+
 int parse_condition(const char *input, char *field, char *op, char *value)
 {
     char copie[200];
@@ -781,14 +786,14 @@ int parse_condition(const char *input, char *field, char *op, char *value)
     char *p2;
 
     strcpy(copie,input);
-
+    //for operations like >=
     p1 = strchr(copie,':');
 
     if(p1==NULL)
         return 0;
 
     *p1='\0';
-
+    //for values like 1,2,3
     p2 = strchr(p1+1,':');
 
     if(p2==NULL)
@@ -854,6 +859,7 @@ void filterCommand(char *dirname, int conditionCount, char *conditions[])
     sprintf(fisier,"%s/reports.dat",dirname);
 
     fd = open(fisier,O_RDONLY);
+    //O_RDONLY->read only
 
     if(fd==-1)
     {
@@ -894,6 +900,72 @@ void filterCommand(char *dirname, int conditionCount, char *conditions[])
     close(fd);
 }
 
+//REMOVE_DISTRICT
+
+//unlink should be done only after the directory was removed successfully
+//remove_district command
+ void remove_district(char*idDistrict,char *role)
+ {
+     if(strcmp(role,"manager")!=0)
+     {
+        printf("Access denied. Manager only.\n");
+        return;
+     }
+
+     checkDirectoryPermission(idDistrict,role);
+     int pid=fork();
+     if(pid<0)
+     {
+         printf("Error while creating child process\n");
+         exit(1);
+     }
+     //the child process execute external command: rm -rf <district_directory>
+     //pid == 0 means this is the child process
+     else if(pid==0)
+     {
+
+         char *arguments[]={"rm","-rf",idDistrict,NULL};
+         execvp("rm",arguments);
+         perror("execvp");
+         exit(1);
+     }
+     //execlp -> list of arguments
+     //execvp -> vector of arguments
+     //pid > 0 means this is the parent process
+     else if(pid>0)
+     {
+
+         int status_ptr;
+
+         //WUNTRACED-also return if a child has stopped
+         if(waitpid(pid,&status_ptr,WUNTRACED)==-1)
+             //-1 meaning wait for any child process.
+         {
+             printf("Error while waiting for child process\n");
+             exit(-1);
+         }
+
+         if(!WIFEXITED(status_ptr) || WEXITSTATUS(status_ptr) != 0)
+         {
+             printf("District removal failed\n");
+             return;
+         }
+
+          char linkname[200];
+          sprintf(linkname,"active_reports-%s",idDistrict);
+
+          if(unlink(linkname)==0)
+          {
+             printf("Symbolic link removed\n");
+          }
+          else
+         {
+             perror("unlink");
+         }
+         printf("District removed successfully\n");
+     }
+
+}
 
 int main(int argc,char *argv[])
 {
@@ -905,7 +977,7 @@ int main(int argc,char *argv[])
 
     if(strcmp(argv[1],"--role")!=0 || strcmp(argv[3],"--user")!=0)
     {
-        printf("Bad arguments\n");
+        printf("Wrong arguments\n");
         return 1;
     }
 
@@ -1044,7 +1116,6 @@ int main(int argc,char *argv[])
      if(strcmp(argv[5],"--remove_district")==0)
     {
 
-        checkDirectoryPermission(dirname,argv[2]);
 
         remove_district(dirname,argv[2]);
         free(dirname);

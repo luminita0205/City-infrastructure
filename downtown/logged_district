@@ -1,14 +1,28 @@
-[1777226243] manager alice add
-[2026-05-07 12:28:24] manager ana add
-[2026-05-07 12:28:24] manager ana Pid-ul nu a putut fi gasit sau semnalul nu a putut fi transmis
-
-[2026-05-09 20:13:59] manager ana list
-[2026-05-09 20:16:06] manager ana remove_report
-[2026-05-09 20:16:11] manager ana remove_report
-[2026-05-09 20:16:13] manager ana remove_report
-[2026-05-09 20:16:18] manager ana list
-[2026-05-09 20:18:43] manager ana add
-[2026-05-09 20:18:43] manager ana Monitor PID could not be found or signal could not be sent
-[2026-05-09 20:19:04] manager ana add
-[2026-05-09 20:19:04] manager ana Monitor PID could not be found or signal could not be sent
-[2026-05-09 20:20:15] manager ana list
+[2026-05-19 12:02:56] manager alina add
+[2026-05-19 12:02:56] manager alina Monitor PID could not be found or signal could not be sent
+[2026-05-20 08:37:43] manager alin add
+[2026-05-20 08:37:43] manager alin Monitor PID could not be found or signal could not be sent
+[2026-05-20 08:44:33] manager alina add
+[2026-05-20 08:44:33] manager alina Monitor PID could not be found or signal could not be sent
+[2026-05-20 09:25:37] manager oana add
+[2026-05-20 09:25:37] manager oana Monitor PID could not be found or signal could not be sent
+[2026-05-20 09:27:11] manager oana update_threshold
+[2026-05-20 09:28:25] manager oana filter
+[2026-05-20 09:28:53] manager oana filter
+[2026-05-20 09:29:04] manager oana filter
+[2026-05-20 09:29:12] manager oana filter
+[2026-05-23 15:36:57] manager alina list
+[2026-05-23 15:37:27] manager alina view
+[2026-05-23 15:38:17] manager alina remove_report
+[2026-05-23 15:38:47] manager alina list
+[2026-05-23 15:39:25] manager alina update_threshold
+[2026-05-23 15:40:39] manager alina add
+[2026-05-23 15:40:39] manager alina Monitor PID could not be found or signal could not be sent
+[2026-05-23 15:41:49] manager alina filter
+[2026-05-23 16:33:54] manager alina update_threshold
+[2026-05-24 11:24:28] manager alina filter
+[2026-05-24 11:24:50] manager alina update_threshold
+[2026-05-24 11:25:18] manager alina view
+[2026-05-24 11:25:50] manager alina list
+[2026-05-24 11:48:18] manager alina list
+[2026-05-24 12:16:18] manager alina list

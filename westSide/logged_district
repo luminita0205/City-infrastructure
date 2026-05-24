@@ -37,3 +37,44 @@
 [2026-05-12 16:36:43] manager alina Monitor notified successfully
 [2026-05-12 16:42:14] manager alina add
 [2026-05-12 16:42:14] manager alina Monitor notified successfully
+[2026-05-13 08:35:53] manager alina add
+[2026-05-13 08:35:53] manager alina Monitor notified successfully
+[2026-05-13 08:39:30] manager alina list
+[2026-05-13 08:44:37] manager alina add
+[2026-05-13 08:44:37] manager alina Monitor notified successfully
+[2026-05-13 08:45:42] manager alina remove_report
+[2026-05-13 08:45:44] manager alina remove_report
+[2026-05-13 08:45:47] manager alina remove_report
+[2026-05-13 08:45:52] manager alina remove_report
+[2026-05-13 08:45:59] manager alina remove_report
+[2026-05-13 08:46:02] manager alina remove_report
+[2026-05-13 08:46:05] manager alina remove_report
+[2026-05-13 08:46:09] manager alina remove_report
+[2026-05-13 08:46:18] manager alina list
+[2026-05-13 08:46:27] manager alina remove_report
+[2026-05-18 16:39:48] manager alina list
+[2026-05-18 16:40:30] manager alina add
+[2026-05-18 16:40:30] manager alina Monitor PID could not be found or signal could not be sent
+[2026-05-20 08:34:55] manager alina list
+[2026-05-20 08:38:49] manager alina list
+[2026-05-20 08:43:58] manager alina update_threshold
+[2026-05-20 08:58:30] manager teo add
+[2026-05-20 08:58:30] manager teo Monitor PID could not be found or signal could not be sent
+[2026-05-20 09:06:30] manager teo add
+[2026-05-20 09:06:30] manager teo Monitor PID could not be found or signal could not be sent
+[2026-05-20 09:13:47] manager oana add
+[2026-05-20 09:13:47] manager oana Monitor PID could not be found or signal could not be sent
+[2026-05-20 09:14:04] manager oana list
+[2026-05-20 09:14:55] manager oana remove_report
+[2026-05-20 09:14:57] manager oana remove_report
+[2026-05-20 09:15:00] manager oana remove_report
+[2026-05-20 09:15:56] manager alina view
+[2026-05-20 09:19:58] manager ana filter
+[2026-05-20 09:20:38] manager ana filter
+[2026-05-20 09:21:59] manager ana filter
+[2026-05-20 09:22:12] manager ana filter
+[2026-05-20 09:23:22] manager oana list
+[2026-05-20 09:33:55] manager oana list
+[2026-05-20 09:34:26] manager maria list
+[2026-05-23 15:35:47] manager alina list
+[2026-05-24 11:48:34] manager alina list

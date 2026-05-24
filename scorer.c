@@ -1,11 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <signal.h>
-#include <unistd.h>
 #include<string.h>
-#include <fcntl.h>
+#include <time.h>
 #define MAX 100
 typedef struct
 {
@@ -18,6 +14,7 @@ typedef struct
     time_t timp;
     char description[100];
 } Report;
+
 //for each score we need the name of the inspector and the severity level(the sum will be the nwe score)
 typedef struct
 {
@@ -28,7 +25,7 @@ int main(int argc,char *argv[])
 {
     if(argc !=2)
     {
-        printf("Invalid arguments");
+        printf("Invalid arguments\n");
         exit(-1);
     }
     //reads each report from the current district
@@ -38,7 +35,7 @@ int main(int argc,char *argv[])
     FILE *f=fopen(path,"rb");
     if(f==NULL)
     {
-        printf("error opening file");
+        printf("Error opening file\n");
         exit(-1);
 
     }
@@ -57,11 +54,18 @@ int main(int argc,char *argv[])
             if(strcmp(s[i].name,report.inspector_name)==0)
             {
                 index=i;
+                break;
             }
         }
 
         if(index==-1)
         {
+             if(n >= MAX)
+            {
+                printf("Too many inspectors\n");
+                break;
+            }
+
             strcpy(s[n].name,report.inspector_name);
             s[n].score=report.severity_level;
             n++;
